@@ -5,14 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>音檔剪輯與合併工具</title>
     
-    <!-- 🌟 加入這行神奇的腳本：補足 GitHub Pages 缺少的安全標頭 -->
+    <!-- 🌟 修改這裡：改用讀取本地端的 coi-serviceworker.js -->
     <script src="coi-serviceworker.js"></script>
 
-    <!-- 原本引入的 ffmpeg.wasm -->
+    <!-- 引入 ffmpeg.wasm -->
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     
     <style>
-        /* ...你的 CSS 樣式維持不變... */
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+        .section { background: #f4f4f4; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+        button { padding: 8px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:disabled { background: #ccc; }
     </style>
 </head>
 <body>
