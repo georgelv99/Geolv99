@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音檔剪輯與合併工具 (終極完美版)</title>
+    <title>音檔剪輯與合併工具</title>
     
     <!-- 引入最新 v0.12 版的 FFmpeg 與 Util -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
@@ -51,7 +51,6 @@
 
     <script>
         const { FFmpeg } = window.FFmpegWASM;
-        // 🌟 修正點 1：把 toBlobURL 工具拿出來用
         const { fetchFile, toBlobURL } = window.FFmpegUtil;
         
         const ffmpeg = new FFmpeg();
@@ -61,18 +60,17 @@
 
         async function init() {
             try {
-                statusEl.innerText = "系統狀態：正在下載處理引擎 (首次載入約需 5~10 秒，之後會自動快取)...";
+                statusEl.innerText = "系統狀態：正在下載處理引擎 (首次載入約需 5~10 秒)...";
                 statusEl.style.color = "#f0ad4e";
                 
-                // 定義套件的遠端網址
                 const baseURL = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd';
                 const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
 
-                // 🌟 修正點 2：使用 toBlobURL 將檔案轉成記憶體網址，完美繞過跨網域 Worker 限制
+                // 🌟 就是這裡！將 classWorkerURL 修正為 workerURL
                 await ffmpeg.load({
                     coreURL: await toBlobURL(`${coreURL}/ffmpeg-core.js`, 'text/javascript'),
                     wasmURL: await toBlobURL(`${coreURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                    classWorkerURL: await toBlobURL(`${baseURL}/814.ffmpeg.js`, 'text/javascript'),
+                    workerURL: await toBlobURL(`${baseURL}/814.ffmpeg.js`, 'text/javascript')
                 });
                 
                 statusEl.innerText = "系統狀態：✅ 引擎載入完成，可以開始使用！";
