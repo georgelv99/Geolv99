@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音檔剪輯與合併工具 (免設定直接可用版)</title>
+    <title>音檔剪輯與合併工具 (終極完美版)</title>
     
-    <!-- 引入最新 v0.12 版的 FFmpeg -->
+    <!-- 引入最新 v0.12 版的 FFmpeg 與 Util -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
     <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
     
@@ -50,26 +50,29 @@
     </div>
 
     <script>
-        // 🌟 修正點：v0.12 UMD 版的全局變數名稱是 FFmpegWASM
         const { FFmpeg } = window.FFmpegWASM;
-        const { fetchFile } = window.FFmpegUtil;
+        // 🌟 修正點 1：把 toBlobURL 工具拿出來用
+        const { fetchFile, toBlobURL } = window.FFmpegUtil;
         
-        // 建立 FFmpeg 實體
         const ffmpeg = new FFmpeg();
         const statusEl = document.getElementById('status');
         const btnCut = document.getElementById('btn-cut');
         const btnMerge = document.getElementById('btn-merge');
 
-        // 初始化載入
         async function init() {
             try {
-                statusEl.innerText = "系統狀態：正在下載處理引擎 (首次載入約需幾秒鐘)...";
+                statusEl.innerText = "系統狀態：正在下載處理引擎 (首次載入約需 5~10 秒，之後會自動快取)...";
                 statusEl.style.color = "#f0ad4e";
                 
-                // 指定載入單執行緒版本的核心
+                // 定義套件的遠端網址
+                const baseURL = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd';
+                const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
+                // 🌟 修正點 2：使用 toBlobURL 將檔案轉成記憶體網址，完美繞過跨網域 Worker 限制
                 await ffmpeg.load({
-                    coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-                    wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+                    coreURL: await toBlobURL(`${coreURL}/ffmpeg-core.js`, 'text/javascript'),
+                    wasmURL: await toBlobURL(`${coreURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                    classWorkerURL: await toBlobURL(`${baseURL}/814.ffmpeg.js`, 'text/javascript'),
                 });
                 
                 statusEl.innerText = "系統狀態：✅ 引擎載入完成，可以開始使用！";
@@ -82,7 +85,6 @@
             }
         }
         
-        // 網頁開啟時立刻啟動
         init();
 
         // ✂️ 剪輯功能
