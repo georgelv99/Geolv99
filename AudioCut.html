@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音檔剪輯與合併工具</title>
+    
+    <!-- 🌟 加入這行神奇的腳本：補足 GitHub Pages 缺少的安全標頭 -->
+    <script src="https://cdn.jsdelivr.net/gh/gzuidhof/coi-serviceworker@master/coi-serviceworker.js"></script>
+
+    <!-- 原本引入的 ffmpeg.wasm -->
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    
+    <style>
+        /* ...你的 CSS 樣式維持不變... */
+    </style>
+</head>
+<body>
+
+    <h1>🎵 網頁端音檔處理工具</h1>
+    <p id="status">系統狀態：等待載入 FFmpeg...</p>
+
+    <!-- 剪輯區塊 -->
+    <div class="section">
+        <h2>✂️ 音檔剪輯</h2>
+        <input type="file" id="cut-file" accept="audio/mpeg, audio/mp4, audio/x-m4a">
+        <br><br>
+        <label>開始時間 (秒): <input type="number" id="start-time" value="0"></label>
+        <label>結束時間 (秒): <input type="number" id="end-time" value="10"></label>
+        <br><br>
+        <button id="btn-cut" disabled>開始剪輯</button>
+    </div>
+
+    <!-- 合併區塊 -->
+    <div class="section">
+        <h2>🔗 音檔合併</h2>
+        <input type="file" id="merge-file1" accept="audio/mpeg, audio/mp4, audio/x-m4a">
+        <input type="file" id="merge-file2" accept="audio/mpeg, audio/mp4, audio/x-m4a">
+        <br><br>
+        <button id="btn-merge" disabled>開始合併</button>
+    </div>
+
+    <!-- 結果區塊 -->
+    <div class="section" id="result-section" style="display: none;">
+        <h2>✅ 處理結果</h2>
+        <audio id="result-audio" controls></audio>
+        <br>
+        <a id="download-link" href="#" download="output.mp3">⬇️ 下載檔案</a>
+    </div>
+
+    <script>
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+        
+        const statusEl = document.getElementById('status');
+        const btnCut = document.getElementById('btn-cut');
+        const btnMerge = document.getElementById('btn-merge');
+
+        // 初始化 FFmpeg
+        async function init() {
+            try {
+                await ffmpeg.load();
+                statusEl.innerText = "系統狀態：FFmpeg 載入完成，可以開始使用！";
+                btnCut.disabled = false;
+                btnMerge.disabled = false;
+            } catch (e) {
+                statusEl.innerText = "系統狀態：FFmpeg 載入失敗，請確認瀏覽器支援 SharedArrayBuffer。";
+            }
+        }
+        init();
+
+        // 剪輯功能
+        btnCut.addEventListener('click', async () => {
+            const file = document.getElementById('cut-file').files[0];
+            if (!file) return alert("請先選擇檔案！");
+            
+            const start = document.getElementById('start-time').value;
+            const end = document.getElementById('end-time').value;
+            const ext = file.name.split('.').pop();
+            const inputName = `input.${ext}`;
+            const outputName = `output.mp3`;
+
+            statusEl.innerText = "系統狀態：剪輯中...";
+            
+            // 將檔案寫入虛擬記憶體
+            ffmpeg.FS('writeFile', inputName, await fetchFile(file));
+            
+            // 執行剪輯指令 (使用 -ss 與 -to)
+            await ffmpeg.run('-i', inputName, '-ss', start, '-to', end, '-c', 'copy', outputName);
+            
+            showResult(outputName);
+        });
+
+        // 合併功能
+        btnMerge.addEventListener('click', async () => {
+            const file1 = document.getElementById('merge-file1').files[0];
+            const file2 = document.getElementById('merge-file2').files[0];
+            if (!file1 || !file2) return alert("請選擇兩個檔案！");
+
+            statusEl.innerText = "系統狀態：合併中...";
+
+            // 寫入檔案
+            ffmpeg.FS('writeFile', '1.mp3', await fetchFile(file1));
+            ffmpeg.FS('writeFile', '2.mp3', await fetchFile(file2));
+            
+            // 建立合併清單 (concat demuxer 格式)
+            const listContent = "file '1.mp3'\nfile '2.mp3'";
+            ffmpeg.FS('writeFile', 'list.txt', listContent);
+
+            // 執行合併指令
+            await ffmpeg.run('-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', 'output.mp3');
+
+            showResult('output.mp3');
+        });
+
+        // 顯示並下載結果
+        function showResult(outputName) {
+            const data = ffmpeg.FS('readFile', outputName);
+            const blob = new Blob([data.buffer], { type: 'audio/mpeg' });
+            const url = URL.createObjectURL(blob);
+            
+            document.getElementById('result-section').style.display = 'block';
+            const audio = document.getElementById('result-audio');
+            const link = document.getElementById('download-link');
+            
+            audio.src = url;
+            link.href = url;
+            statusEl.innerText = "系統狀態：處理完成！";
+        }
+    </script>
+</body>
+</html>
