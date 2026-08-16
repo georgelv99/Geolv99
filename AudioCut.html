@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>音檔剪輯與合併工具 (免設定直接可用版)</title>
     
-    <!-- 🌟 引入最新 v0.12 版的 FFmpeg (單執行緒核心，完美避開 SharedArrayBuffer 問題) -->
+    <!-- 引入最新 v0.12 版的 FFmpeg -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
     <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
     
@@ -50,8 +50,8 @@
     </div>
 
     <script>
-        // 取得 v0.12 的物件
-        const { FFmpeg } = window.FFmpeg;
+        // 🌟 修正點：v0.12 UMD 版的全局變數名稱是 FFmpegWASM
+        const { FFmpeg } = window.FFmpegWASM;
         const { fetchFile } = window.FFmpegUtil;
         
         // 建立 FFmpeg 實體
@@ -66,7 +66,7 @@
                 statusEl.innerText = "系統狀態：正在下載處理引擎 (首次載入約需幾秒鐘)...";
                 statusEl.style.color = "#f0ad4e";
                 
-                // 指定載入單執行緒版本的核心，徹底解決 SharedArrayBuffer 報錯
+                // 指定載入單執行緒版本的核心
                 await ffmpeg.load({
                     coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
                     wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
@@ -98,12 +98,8 @@
 
             statusEl.innerText = "系統狀態：✂️ 剪輯處理中，請稍候...";
             
-            // 將檔案寫入虛擬環境 (v0.12 語法)
             await ffmpeg.writeFile(inputName, await fetchFile(file));
-            
-            // 執行指令 (v0.12 改用 exec)
             await ffmpeg.exec(['-i', inputName, '-ss', start, '-to', end, '-c', 'copy', outputName]);
-            
             await showResult(outputName);
         });
 
@@ -115,23 +111,18 @@
 
             statusEl.innerText = "系統狀態：🔗 合併處理中，請稍候...";
 
-            // 寫入兩個檔案
             await ffmpeg.writeFile('1.mp3', await fetchFile(file1));
             await ffmpeg.writeFile('2.mp3', await fetchFile(file2));
             
-            // 建立合併清單 (v0.12 需要將文字轉換為 Uint8Array 寫入)
             const listContent = "file '1.mp3'\nfile '2.mp3'";
             await ffmpeg.writeFile('list.txt', new TextEncoder().encode(listContent));
 
-            // 執行合併指令
             await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', 'output.mp3']);
-
             await showResult('output.mp3');
         });
 
         // 🎁 顯示與下載結果
         async function showResult(outputName) {
-            // 讀取結果檔案 (v0.12 語法)
             const data = await ffmpeg.readFile(outputName);
             const blob = new Blob([data.buffer], { type: 'audio/mpeg' });
             const url = URL.createObjectURL(blob);
