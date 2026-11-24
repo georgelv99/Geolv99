@@ -43,13 +43,13 @@
 
     .top-bar {
       display: grid;
-      grid-template-columns: 1fr 2fr auto;
+      grid-template-columns: 1fr auto;
       gap: 12px;
       align-items: end;
     }
 
     label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
-    input[type="text"], input[type="number"], input[type="url"], textarea {
+    input[type="text"], input[type="number"], textarea {
       width: 100%;
       padding: 8px 10px;
       border: 1px solid #cbd5e1;
@@ -146,8 +146,7 @@
     }
     .action-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .checkbox-label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; cursor: pointer; }
-    .badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 999px; background: #e2e8f0; color: #334155; font-weight: 600; }
-    .badge.live { background: #dcfce7; color: #166534; }
+    .badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 999px; background: #dcfce7; color: #166534; font-weight: 600; }
 
     @media (max-width: 820px) {
       .top-bar, .search-grid, .bottom-grid { grid-template-columns: 1fr; }
@@ -160,7 +159,7 @@
     <div class="card">
       <h1>
         <span>台股持股快速觀察板</span>
-        <span id="modeBadge" class="badge">模擬測試模式（未填 GAS 網址）</span>
+        <span class="badge">即時報價已連線</span>
       </h1>
       <div class="top-bar">
         <div>
@@ -168,11 +167,7 @@
           <input type="number" id="totalCapital" min="0" step="10000" value="1000000" />
         </div>
         <div>
-          <label for="gasUrl">GAS 報價 API 網址（填入後即抓即時台股報價）</label>
-          <input type="url" id="gasUrl" placeholder="https://script.google.com/macros/s/AKfycbwBWypZhXkmOkcAIcjZN2tHWsJ8XsEKU2IFb16TmF8q0mmkHr37p1CDFkfrpCufADE/exec" />
-        </div>
-        <div>
-          <button class="btn-primary" id="refreshAllBtn" style="width: 100%;">更新全部報價</button>
+          <button class="btn-primary" id="refreshAllBtn" style="width: 100%; padding: 9px 20px;">更新全部報價</button>
         </div>
       </div>
     </div>
@@ -245,18 +240,21 @@
 
   <script>
     const STORAGE_KEY = "tw_stock_tracker_v1";
+    // Base64 編碼後的 GAS 報價 API 網址
+    const _ENDPOINT_B64 = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J3Qld5cFpoWGttT2tjQUljalpOMnRIV3NKOFhzRUtVMklGYjE2VG1GOHEwbW1rSHIzN3AxQ0RGa2ZycEN1ZkFERS9leGVj";
 
-    // 預設狀態
+    function getApiUrl() {
+      return atob(_ENDPOINT_B64);
+    }
+
     let state = {
       totalCapital: 1000000,
-      gasUrl: "",
-      holdings: [], // { code, name, price, change, changePct, volume, shares, cost }
+      holdings: [],
       notes: "以18日線跟50日線，輔以MACD判斷多空。"
     };
 
     let currentQuote = null;
 
-    // 載入本機資料
     function loadState() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -264,9 +262,7 @@
       } catch (e) { console.error(e); }
 
       document.getElementById("totalCapital").value = state.totalCapital;
-      document.getElementById("gasUrl").value = state.gasUrl;
       document.getElementById("strategyNotes").value = state.notes;
-      updateModeBadge();
       renderAll();
     }
 
@@ -274,39 +270,8 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
-    function updateModeBadge() {
-      const badge = document.getElementById("modeBadge");
-      if (state.gasUrl.trim()) {
-        badge.textContent = "即時報價模式 (GAS)";
-        badge.classList.add("live");
-      } else {
-        badge.textContent = "模擬測試模式（未填 GAS 網址）";
-        badge.classList.remove("live");
-      }
-    }
-
-    // 取得報價（有 GAS 網址抓真實資料，否則回傳模擬資料方便測試）
     async function fetchQuotes(codes) {
-      const url = state.gasUrl.trim();
-      if (!url) {
-        const mockNames = { "009816": "凱基台灣TOP50", "00631L": "元大台灣50正2", "00632R": "元大台灣50反1", "2330": "台積電" };
-        const mockData = {};
-        codes.forEach(code => {
-          const base = code === "2330" ? 1050 : (code === "00631L" ? 215 : 14.5);
-          const diff = +((Math.random() - 0.45) * base * 0.03).toFixed(2);
-          const price = +(base + diff).toFixed(2);
-          mockData[code] = {
-            code,
-            name: mockNames[code] || `測試股 ${code}`,
-            price,
-            change: diff,
-            changePct: +((diff / base) * 100).toFixed(2),
-            volume: Math.floor(Math.random() * 25000) + 500
-          };
-        });
-        return mockData;
-      }
-
+      const url = getApiUrl();
       const sep = url.includes("?") ? "&" : "?";
       const res = await fetch(`${url}${sep}codes=${encodeURIComponent(codes.join(","))}`);
       const json = await res.json();
@@ -320,7 +285,6 @@
       return `<span class="flat">0.00 (0.00%)</span>`;
     }
 
-    // 1. 查詢單檔股票
     async function handleSearch() {
       const input = document.getElementById("stockCodeInput");
       const code = input.value.trim().toUpperCase();
@@ -364,7 +328,6 @@
 
       const existing = state.holdings.find(h => h.code === currentQuote.code);
       if (existing) {
-        // 若已存在則加總張數並重算加權平均成本
         const totalShares = existing.shares + shares;
         if (totalShares > 0) {
           existing.cost = +(((existing.shares * existing.cost) + (shares * cost)) / totalShares).toFixed(2);
@@ -388,7 +351,6 @@
       renderAll();
     }
 
-    // 批次更新清單內所有報價
     async function refreshAllQuotes() {
       if (state.holdings.length === 0) return;
       const btn = document.getElementById("refreshAllBtn");
@@ -417,7 +379,6 @@
       }
     }
 
-    // 2. 繪製持股清單與 3. 生成摘要
     function renderAll() {
       const tbody = document.getElementById("holdingsBody");
       const capital = Number(state.totalCapital) || 0;
@@ -457,7 +418,6 @@
         }).join("");
       }
 
-      // 統計列
       const totalProfit = totalMarketVal - totalInvested;
       const totalProfitPct = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
       const usedPct = capital > 0 ? (totalInvested / capital) * 100 : 0;
@@ -472,7 +432,6 @@
         <span>未實現損益：<strong class="${profitClass}">${sign}${Math.round(totalProfit).toLocaleString()} 元 (${sign}${totalProfitPct.toFixed(2)}%)</strong></span>
       `;
 
-      // 3. 自動產生文字摘要
       let summary = "";
       if (state.holdings.length === 0) {
         summary = "目前現金100%。";
@@ -480,7 +439,6 @@
         const parts = state.holdings.map(h => {
           const invested = h.cost * h.shares * 1000;
           const pct = capital > 0 ? (invested / capital) * 100 : 0;
-          // 整數不顯示小數點，非整數顯示 1 位小數
           const pctStr = Number.isInteger(+pct.toFixed(1)) ? Math.round(pct) : pct.toFixed(1);
           return `${pctStr}%的資金在${h.code}，成本${h.cost}`;
         });
@@ -502,7 +460,6 @@
       renderAll();
     };
 
-    // 事件綁定
     document.getElementById("searchBtn").addEventListener("click", handleSearch);
     document.getElementById("stockCodeInput").addEventListener("keydown", e => {
       if (e.key === "Enter") handleSearch();
@@ -513,12 +470,6 @@
       state.totalCapital = parseFloat(e.target.value) || 0;
       saveState();
       renderAll();
-    });
-
-    document.getElementById("gasUrl").addEventListener("change", e => {
-      state.gasUrl = e.target.value.trim();
-      saveState();
-      updateModeBadge();
     });
 
     document.getElementById("strategyNotes").addEventListener("input", e => {
