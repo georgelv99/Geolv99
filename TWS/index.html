@@ -40,13 +40,10 @@
 
     h1 { margin: 0 0 12px; font-size: 1.35rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     h2 { margin: 0 0 12px; font-size: 1.05rem; color: #1e293b; border-left: 4px solid var(--primary); padding-left: 8px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    .card-header h2 { margin: 0; }
 
-    .top-bar {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items: end;
-    }
+    .top-bar { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
 
     label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
     input[type="text"], input[type="number"], textarea {
@@ -69,20 +66,18 @@
       cursor: pointer;
       transition: background 0.15s, opacity 0.15s;
     }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
     .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
-    .btn-outline:hover { background: #eff6ff; }
+    .btn-outline:hover:not(:disabled) { background: #eff6ff; }
+    .btn-sell { background: #fef3c7; color: #b45309; padding: 5px 9px; font-size: 0.82rem; }
+    .btn-sell:hover { background: #fde68a; }
     .btn-danger { background: #fee2e2; color: #b91c1c; padding: 5px 9px; font-size: 0.82rem; }
     .btn-danger:hover { background: #fecaca; }
 
     /* 查股區 */
-    .search-grid {
-      display: grid;
-      grid-template-columns: 260px 1fr;
-      gap: 16px;
-      align-items: stretch;
-    }
+    .search-grid { display: grid; grid-template-columns: 260px 1fr; gap: 16px; align-items: stretch; }
     .search-input-row { display: flex; gap: 8px; }
     .quote-preview {
       background: #f8fafc;
@@ -114,12 +109,9 @@
     th, td { padding: 10px 8px; text-align: right; border-bottom: 1px solid var(--border); }
     th { background: #f8fafc; color: var(--muted); font-weight: 600; font-size: 0.82rem; }
     th:nth-child(1), td:nth-child(1), th:nth-child(2), td:nth-child(2) { text-align: left; }
-    .inline-edit {
-      width: 78px !important;
-      padding: 4px 6px !important;
-      text-align: right;
-      font-size: 0.88rem !important;
-    }
+    .inline-edit { width: 78px !important; padding: 4px 6px !important; text-align: right; font-size: 0.88rem !important; }
+    .ops-cell { display: flex; gap: 6px; justify-content: flex-end; }
+
     .summary-strip {
       display: flex;
       flex-wrap: wrap;
@@ -131,6 +123,17 @@
       font-size: 0.9rem;
     }
     .summary-strip strong { font-size: 1rem; }
+
+    /* 近期損益區間按鈕 */
+    .range-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .range-btn {
+      padding: 5px 12px;
+      font-size: 0.84rem;
+      background: #f1f5f9;
+      color: #475569;
+      border-radius: 999px;
+    }
+    .range-btn.active { background: var(--primary); color: #fff; }
 
     /* 摘要與筆記 */
     .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -147,6 +150,37 @@
     .action-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .checkbox-label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; cursor: pointer; }
     .badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 999px; background: #dcfce7; color: #166534; font-weight: 600; }
+
+    /* 賣出彈出視窗 */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+    }
+    .modal h3 { margin: 0 0 12px; font-size: 1.1rem; }
+    .modal-field { margin-bottom: 12px; }
+    .modal-preview {
+      background: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 14px;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
     @media (max-width: 820px) {
       .top-bar, .search-grid, .bottom-grid { grid-template-columns: 1fr; }
@@ -214,10 +248,43 @@
       <div class="summary-strip" id="portfolioStats"></div>
     </div>
 
-    <!-- 3. 持股摘要 & 4. 交易戰法筆記 -->
+    <!-- 3. 近期損益表（新增） -->
+    <div class="card">
+      <div class="card-header">
+        <h2>3. 近期損益表（已實現）</h2>
+        <div class="range-tabs">
+          <button class="range-btn active" data-months="1">最近一個月</button>
+          <button class="range-btn" data-months="3">最近三個月</button>
+          <button class="range-btn" data-months="6">最近半年</button>
+          <button class="range-btn" data-months="12">最近一年</button>
+          <button class="btn-outline" id="refreshHistoryBtn" style="padding: 4px 10px; font-size: 0.82rem;">重新讀取</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>賣出日期</th>
+              <th>股號 / 股名</th>
+              <th>張數</th>
+              <th>買進成本</th>
+              <th>賣出價格</th>
+              <th>已實現損益</th>
+              <th>報酬率</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">載入交易紀錄中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="summary-strip" id="historyStats"></div>
+    </div>
+
+    <!-- 4. 持股摘要 & 5. 交易戰法筆記 -->
     <div class="bottom-grid">
       <div class="card">
-        <h2>3. 持股狀況摘要</h2>
+        <h2>4. 持股狀況摘要</h2>
         <div class="summary-box" id="summaryText"></div>
         <div class="action-row">
           <label class="checkbox-label">
@@ -229,7 +296,7 @@
       </div>
 
       <div class="card">
-        <h2>4. 股市交易戰法筆記</h2>
+        <h2>5. 股市交易戰法筆記</h2>
         <textarea id="strategyNotes" rows="5" placeholder="例如：以18日線跟50日線，輔以MACD判斷多空。"></textarea>
         <div style="font-size: 0.78rem; color: var(--muted); margin-top: 6px; text-align: right;">
           輸入內容將自動儲存於本機瀏覽器
@@ -238,9 +305,28 @@
     </div>
   </div>
 
+  <!-- 賣出確認視窗 -->
+  <div class="modal-backdrop" id="sellModal">
+    <div class="modal">
+      <h3 id="sellModalTitle">賣出股票</h3>
+      <div class="modal-field">
+        <label for="sellSharesInput">賣出張數</label>
+        <input type="number" id="sellSharesInput" step="0.001" min="0" />
+      </div>
+      <div class="modal-field">
+        <label for="sellPriceInput">賣出價格（元）</label>
+        <input type="number" id="sellPriceInput" step="0.01" min="0" />
+      </div>
+      <div class="modal-preview" id="sellPreviewBox"></div>
+      <div class="modal-actions">
+        <button class="btn-outline" id="cancelSellBtn">取消</button>
+        <button class="btn-primary" id="confirmSellBtn">確認賣出並存入試算表</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const STORAGE_KEY = "tw_stock_tracker_v1";
-    // Base64 編碼後的 GAS 報價 API 網址
     const _ENDPOINT_B64 = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J3Qld5cFpoWGttT2tjQUljalpOMnRIV3NKOFhzRUtVMklGYjE2VG1GOHEwbW1rSHIzN3AxQ0RGa2ZycEN1ZkFERS9leGVj";
 
     function getApiUrl() {
@@ -254,6 +340,9 @@
     };
 
     let currentQuote = null;
+    let sellTargetIdx = null;
+    let allHistoryRecords = [];
+    let selectedMonths = 1;
 
     function loadState() {
       try {
@@ -264,6 +353,7 @@
       document.getElementById("totalCapital").value = state.totalCapital;
       document.getElementById("strategyNotes").value = state.notes;
       renderAll();
+      loadTradeHistory();
     }
 
     function saveState() {
@@ -273,7 +363,7 @@
     async function fetchQuotes(codes) {
       const url = getApiUrl();
       const sep = url.includes("?") ? "&" : "?";
-      const res = await fetch(`${url}${sep}codes=${encodeURIComponent(codes.join(","))}`);
+      const res = await fetch(`${url}${sep}action=quotes&codes=${encodeURIComponent(codes.join(","))}`);
       const json = await res.json();
       if (json.status !== "ok") throw new Error(json.message || "查詢失敗");
       return json.data || {};
@@ -285,6 +375,7 @@
       return `<span class="flat">0.00 (0.00%)</span>`;
     }
 
+    // 1. 查詢單檔股票
     async function handleSearch() {
       const input = document.getElementById("stockCodeInput");
       const code = input.value.trim().toUpperCase();
@@ -341,11 +432,7 @@
           volume: currentQuote.volume
         });
       } else {
-        state.holdings.push({
-          ...currentQuote,
-          shares,
-          cost
-        });
+        state.holdings.push({ ...currentQuote, shares, cost });
       }
       saveState();
       renderAll();
@@ -379,6 +466,7 @@
       }
     }
 
+    // 2. 繪製持股清單與摘要
     function renderAll() {
       const tbody = document.getElementById("holdingsBody");
       const capital = Number(state.totalCapital) || 0;
@@ -386,7 +474,7 @@
       let totalMarketVal = 0;
 
       if (state.holdings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--muted); padding:24px;">目前尚無持股，請由上方查詢並加入。</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--muted); padding:24px;">目前無持股，請由上方查詢並加入。</td></tr>`;
       } else {
         tbody.innerHTML = state.holdings.map((h, idx) => {
           const invested = h.cost * h.shares * 1000;
@@ -412,7 +500,12 @@
               <td><strong>${weightPct.toFixed(1)}%</strong></td>
               <td><input type="number" class="inline-edit" step="0.01" min="0" value="${h.cost}" onchange="updateHolding(${idx}, 'cost', this.value)" /></td>
               <td class="${profitClass}">${profitSign}${Math.round(profit).toLocaleString()} (${profitSign}${profitPct.toFixed(2)}%)</td>
-              <td><button class="btn-danger" onclick="removeHolding(${idx})">刪除</button></td>
+              <td>
+                <div class="ops-cell">
+                  <button class="btn-sell" onclick="openSellModal(${idx})">賣出</button>
+                  <button class="btn-danger" onclick="removeHolding(${idx})">刪除</button>
+                </div>
+              </td>
             </tr>
           `;
         }).join("");
@@ -448,6 +541,157 @@
       document.getElementById("summaryText").textContent = summary;
     }
 
+    // 賣出視窗邏輯
+    window.openSellModal = function(idx) {
+      sellTargetIdx = idx;
+      const h = state.holdings[idx];
+      document.getElementById("sellModalTitle").textContent = `賣出 ${h.code} ${h.name}`;
+      document.getElementById("sellSharesInput").value = h.shares;
+      document.getElementById("sellPriceInput").value = h.price;
+      updateSellPreview();
+      document.getElementById("sellModal").classList.add("open");
+    };
+
+    function updateSellPreview() {
+      if (sellTargetIdx === null) return;
+      const h = state.holdings[sellTargetIdx];
+      const shares = parseFloat(document.getElementById("sellSharesInput").value) || 0;
+      const sellPrice = parseFloat(document.getElementById("sellPriceInput").value) || 0;
+      const invested = h.cost * shares * 1000;
+      const profit = Math.round((sellPrice - h.cost) * shares * 1000);
+      const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
+      const cls = profit > 0 ? "up" : profit < 0 ? "down" : "flat";
+      const sign = profit > 0 ? "+" : "";
+
+      document.getElementById("sellPreviewBox").innerHTML = `
+        買進成本：<strong>${h.cost}</strong> 元<br/>
+        預估實現損益：<strong class="${cls}">${sign}${profit.toLocaleString()} 元 (${sign}${profitPct.toFixed(2)}%)</strong>
+      `;
+    }
+
+    document.getElementById("sellSharesInput").addEventListener("input", updateSellPreview);
+    document.getElementById("sellPriceInput").addEventListener("input", updateSellPreview);
+    document.getElementById("cancelSellBtn").addEventListener("click", () => {
+      document.getElementById("sellModal").classList.remove("open");
+      sellTargetIdx = null;
+    });
+
+    document.getElementById("confirmSellBtn").addEventListener("click", async () => {
+      if (sellTargetIdx === null) return;
+      const h = state.holdings[sellTargetIdx];
+      const shares = parseFloat(document.getElementById("sellSharesInput").value) || 0;
+      const sellPrice = parseFloat(document.getElementById("sellPriceInput").value) || 0;
+      if (shares <= 0 || sellPrice <= 0) {
+        alert("請輸入有效的賣出張數與價格");
+        return;
+      }
+
+      const btn = document.getElementById("confirmSellBtn");
+      btn.textContent = "寫入試算表中...";
+      btn.disabled = true;
+
+      try {
+        const payload = {
+          action: "sell",
+          code: h.code,
+          name: h.name,
+          shares: shares,
+          cost: h.cost,
+          sellPrice: sellPrice
+        };
+        // 不設 application/json header 以避開 GAS CORS preflight 限制
+        const res = await fetch(getApiUrl(), {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.status !== "ok") throw new Error(json.message || "寫入失敗");
+
+        // 更新持股清單：全數賣出則移除，部分賣出則扣除張數
+        if (shares >= h.shares) {
+          state.holdings.splice(sellTargetIdx, 1);
+        } else {
+          h.shares = +(h.shares - shares).toFixed(4);
+        }
+        saveState();
+        renderAll();
+        document.getElementById("sellModal").classList.remove("open");
+        sellTargetIdx = null;
+        await loadTradeHistory();
+      } catch (err) {
+        alert("寫入試算表失敗：" + err.message);
+      } finally {
+        btn.textContent = "確認賣出並存入試算表";
+        btn.disabled = false;
+      }
+    });
+
+    // 3. 讀取與篩選近期損益表
+    async function loadTradeHistory() {
+      const tbody = document.getElementById("historyBody");
+      try {
+        const url = getApiUrl();
+        const sep = url.includes("?") ? "&" : "?";
+        const res = await fetch(`${url}${sep}action=history`);
+        const json = await res.json();
+        if (json.status !== "ok") throw new Error(json.message || "讀取失敗");
+        allHistoryRecords = json.data || [];
+        renderHistory();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--up); padding:18px;">無法讀取試算表紀錄：${err.message}</td></tr>`;
+        document.getElementById("historyStats").innerHTML = "";
+      }
+    }
+
+    function renderHistory() {
+      const tbody = document.getElementById("historyBody");
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - selectedMonths);
+      cutoff.setHours(0, 0, 0, 0);
+
+      const filtered = allHistoryRecords.filter(r => {
+        const d = new Date(r.date + "T00:00:00");
+        return !isNaN(d) && d >= cutoff;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">此期間內尚無已實現交易紀錄。</td></tr>`;
+        document.getElementById("historyStats").innerHTML = `<span>期間交易筆數：<strong>0 筆</strong></span><span>期間已實現總損益：<strong>0 元</strong></span>`;
+        return;
+      }
+
+      let totalProfit = 0;
+      let winCount = 0;
+
+      tbody.innerHTML = filtered.map(r => {
+        totalProfit += r.profit;
+        if (r.profit > 0) winCount++;
+        const cls = r.profit > 0 ? "up" : r.profit < 0 ? "down" : "flat";
+        const sign = r.profit > 0 ? "+" : "";
+        return `
+          <tr>
+            <td>${r.date}</td>
+            <td><strong>${r.code}</strong> ${r.name}</td>
+            <td>${r.shares}</td>
+            <td>${r.cost.toFixed(2)}</td>
+            <td>${r.sellPrice.toFixed(2)}</td>
+            <td class="${cls}">${sign}${Math.round(r.profit).toLocaleString()}</td>
+            <td class="${cls}">${sign}${r.profitPct.toFixed(2)}%</td>
+          </tr>
+        `;
+      }).join("");
+
+      const winRate = ((winCount / filtered.length) * 100).toFixed(1);
+      const totalCls = totalProfit > 0 ? "up" : totalProfit < 0 ? "down" : "flat";
+      const totalSign = totalProfit > 0 ? "+" : "";
+
+      document.getElementById("historyStats").innerHTML = `
+        <span>期間交易筆數：<strong>${filtered.length} 筆</strong></span>
+        <span>勝率：<strong>${winRate}%</strong> (${winCount} 勝 / ${filtered.length - winCount} 負)</span>
+        <span>期間已實現總損益：<strong class="${totalCls}">${totalSign}${Math.round(totalProfit).toLocaleString()} 元</strong></span>
+      `;
+    }
+
     window.updateHolding = function(idx, field, val) {
       state.holdings[idx][field] = parseFloat(val) || 0;
       saveState();
@@ -460,11 +704,22 @@
       renderAll();
     };
 
+    // 事件綁定
     document.getElementById("searchBtn").addEventListener("click", handleSearch);
     document.getElementById("stockCodeInput").addEventListener("keydown", e => {
       if (e.key === "Enter") handleSearch();
     });
     document.getElementById("refreshAllBtn").addEventListener("click", refreshAllQuotes);
+    document.getElementById("refreshHistoryBtn").addEventListener("click", loadTradeHistory);
+
+    document.querySelectorAll(".range-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".range-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedMonths = Number(btn.dataset.months);
+        renderHistory();
+      });
+    });
 
     document.getElementById("totalCapital").addEventListener("input", e => {
       state.totalCapital = parseFloat(e.target.value) || 0;
