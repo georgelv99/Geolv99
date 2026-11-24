@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>台股持股快速觀察板</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --up: #dc2626;
+      --down: #16a34a;
+      --flat: #64748b;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .container { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border);
+    }
+
+    h1 { margin: 0 0 12px; font-size: 1.35rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    h2 { margin: 0 0 12px; font-size: 1.05rem; color: #1e293b; border-left: 4px solid var(--primary); padding-left: 8px; }
+
+    .top-bar {
+      display: grid;
+      grid-template-columns: 1fr 2fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+    input[type="text"], input[type="number"], input[type="url"], textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, textarea:focus { border-color: var(--primary); }
+
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
+    .btn-outline:hover { background: #eff6ff; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; padding: 5px 9px; font-size: 0.82rem; }
+    .btn-danger:hover { background: #fecaca; }
+
+    /* 查股區 */
+    .search-grid {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+    .search-input-row { display: flex; gap: 8px; }
+    .quote-preview {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 76px;
+    }
+    .quote-info { display: flex; flex-wrap: wrap; align-items: baseline; gap: 14px; }
+    .quote-name { font-size: 1.1rem; font-weight: 700; }
+    .quote-price { font-size: 1.35rem; font-weight: 800; }
+    .quote-meta { font-size: 0.9rem; color: var(--muted); }
+    .add-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .add-controls input { width: 95px; padding: 6px 8px; font-size: 0.88rem; }
+
+    /* 顏色 */
+    .up { color: var(--up); font-weight: 700; }
+    .down { color: var(--down); font-weight: 700; }
+    .flat { color: var(--flat); font-weight: 600; }
+
+    /* 表格 */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; white-space: nowrap; }
+    th, td { padding: 10px 8px; text-align: right; border-bottom: 1px solid var(--border); }
+    th { background: #f8fafc; color: var(--muted); font-weight: 600; font-size: 0.82rem; }
+    th:nth-child(1), td:nth-child(1), th:nth-child(2), td:nth-child(2) { text-align: left; }
+    .inline-edit {
+      width: 78px !important;
+      padding: 4px 6px !important;
+      text-align: right;
+      font-size: 0.88rem !important;
+    }
+    .summary-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: #f8fafc;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .summary-strip strong { font-size: 1rem; }
+
+    /* 摘要與筆記 */
+    .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .summary-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 92px;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+      margin-bottom: 10px;
+    }
+    .action-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .checkbox-label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; cursor: pointer; }
+    .badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 999px; background: #e2e8f0; color: #334155; font-weight: 600; }
+    .badge.live { background: #dcfce7; color: #166534; }
+
+    @media (max-width: 820px) {
+      .top-bar, .search-grid, .bottom-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 頂部設定區 -->
+    <div class="card">
+      <h1>
+        <span>台股持股快速觀察板</span>
+        <span id="modeBadge" class="badge">模擬測試模式（未填 GAS 網址）</span>
+      </h1>
+      <div class="top-bar">
+        <div>
+          <label for="totalCapital">投資總資金（元）</label>
+          <input type="number" id="totalCapital" min="0" step="10000" value="1000000" />
+        </div>
+        <div>
+          <label for="gasUrl">GAS 報價 API 網址（填入後即抓即時台股報價）</label>
+          <input type="url" id="gasUrl" placeholder="https://script.google.com/macros/s/AKfycbwBWypZhXkmOkcAIcjZN2tHWsJ8XsEKU2IFb16TmF8q0mmkHr37p1CDFkfrpCufADE/exec" />
+        </div>
+        <div>
+          <button class="btn-primary" id="refreshAllBtn" style="width: 100%;">更新全部報價</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. 即時查股與新增 -->
+    <div class="card">
+      <h2>1. 即時查股</h2>
+      <div class="search-grid">
+        <div>
+          <label for="stockCodeInput">輸入台股股號（如 009816、2330）</label>
+          <div class="search-input-row">
+            <input type="text" id="stockCodeInput" placeholder="輸入股號後按 Enter" />
+            <button class="btn-primary" id="searchBtn">查詢</button>
+          </div>
+        </div>
+        <div class="quote-preview" id="quotePreview">
+          <span class="quote-meta">請在左側輸入股號查詢即時報價</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 持股清單 -->
+    <div class="card">
+      <h2>2. 持股清單</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>股號</th>
+              <th>股名</th>
+              <th>股價</th>
+              <th>今日漲跌</th>
+              <th>成交量(張)</th>
+              <th>持股張數</th>
+              <th>持有量(%)</th>
+              <th>成本</th>
+              <th>目前損益</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="holdingsBody"></tbody>
+        </table>
+      </div>
+      <div class="summary-strip" id="portfolioStats"></div>
+    </div>
+
+    <!-- 3. 持股摘要 & 4. 交易戰法筆記 -->
+    <div class="bottom-grid">
+      <div class="card">
+        <h2>3. 持股狀況摘要</h2>
+        <div class="summary-box" id="summaryText"></div>
+        <div class="action-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="includeNotesChk" />
+            複製時一併附上交易戰法筆記
+          </label>
+          <button class="btn-outline" id="copySummaryBtn">一鍵複製摘要</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>4. 股市交易戰法筆記</h2>
+        <textarea id="strategyNotes" rows="5" placeholder="例如：以18日線跟50日線，輔以MACD判斷多空。"></textarea>
+        <div style="font-size: 0.78rem; color: var(--muted); margin-top: 6px; text-align: right;">
+          輸入內容將自動儲存於本機瀏覽器
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "tw_stock_tracker_v1";
+
+    // 預設狀態
+    let state = {
+      totalCapital: 1000000,
+      gasUrl: "",
+      holdings: [], // { code, name, price, change, changePct, volume, shares, cost }
+      notes: "以18日線跟50日線，輔以MACD判斷多空。"
+    };
+
+    let currentQuote = null;
+
+    // 載入本機資料
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved) state = { ...state, ...saved };
+      } catch (e) { console.error(e); }
+
+      document.getElementById("totalCapital").value = state.totalCapital;
+      document.getElementById("gasUrl").value = state.gasUrl;
+      document.getElementById("strategyNotes").value = state.notes;
+      updateModeBadge();
+      renderAll();
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function updateModeBadge() {
+      const badge = document.getElementById("modeBadge");
+      if (state.gasUrl.trim()) {
+        badge.textContent = "即時報價模式 (GAS)";
+        badge.classList.add("live");
+      } else {
+        badge.textContent = "模擬測試模式（未填 GAS 網址）";
+        badge.classList.remove("live");
+      }
+    }
+
+    // 取得報價（有 GAS 網址抓真實資料，否則回傳模擬資料方便測試）
+    async function fetchQuotes(codes) {
+      const url = state.gasUrl.trim();
+      if (!url) {
+        const mockNames = { "009816": "凱基台灣TOP50", "00631L": "元大台灣50正2", "00632R": "元大台灣50反1", "2330": "台積電" };
+        const mockData = {};
+        codes.forEach(code => {
+          const base = code === "2330" ? 1050 : (code === "00631L" ? 215 : 14.5);
+          const diff = +((Math.random() - 0.45) * base * 0.03).toFixed(2);
+          const price = +(base + diff).toFixed(2);
+          mockData[code] = {
+            code,
+            name: mockNames[code] || `測試股 ${code}`,
+            price,
+            change: diff,
+            changePct: +((diff / base) * 100).toFixed(2),
+            volume: Math.floor(Math.random() * 25000) + 500
+          };
+        });
+        return mockData;
+      }
+
+      const sep = url.includes("?") ? "&" : "?";
+      const res = await fetch(`${url}${sep}codes=${encodeURIComponent(codes.join(","))}`);
+      const json = await res.json();
+      if (json.status !== "ok") throw new Error(json.message || "查詢失敗");
+      return json.data || {};
+    }
+
+    function formatChangeHtml(change, changePct) {
+      if (change > 0) return `<span class="up">▲ +${change.toFixed(2)} (+${changePct.toFixed(2)}%)</span>`;
+      if (change < 0) return `<span class="down">▼ ${change.toFixed(2)} (${changePct.toFixed(2)}%)</span>`;
+      return `<span class="flat">0.00 (0.00%)</span>`;
+    }
+
+    // 1. 查詢單檔股票
+    async function handleSearch() {
+      const input = document.getElementById("stockCodeInput");
+      const code = input.value.trim().toUpperCase();
+      if (!code) return;
+
+      const preview = document.getElementById("quotePreview");
+      preview.innerHTML = `<span class="quote-meta">查詢 ${code} 中...</span>`;
+
+      try {
+        const dataMap = await fetchQuotes([code]);
+        const q = dataMap[code];
+        if (!q) {
+          currentQuote = null;
+          preview.innerHTML = `<span class="quote-meta" style="color:var(--up);">查無股號 ${code}，請確認是否輸入正確。</span>`;
+          return;
+        }
+        currentQuote = q;
+        preview.innerHTML = `
+          <div class="quote-info">
+            <span class="quote-name">${q.code} ${q.name}</span>
+            <span class="quote-price ${q.change > 0 ? "up" : q.change < 0 ? "down" : "flat"}">${q.price.toFixed(2)}</span>
+            <span>${formatChangeHtml(q.change, q.changePct)}</span>
+            <span class="quote-meta">量：${q.volume.toLocaleString()} 張</span>
+          </div>
+          <div class="add-controls">
+            <input type="number" id="addShares" placeholder="張數" step="0.001" min="0" value="1" title="持股張數" />
+            <input type="number" id="addCost" placeholder="成本價" step="0.01" min="0" value="${q.price}" title="買進成本" />
+            <button class="btn-primary" id="addHoldingBtn">＋加入持股</button>
+          </div>
+        `;
+        document.getElementById("addHoldingBtn").addEventListener("click", addCurrentToHoldings);
+      } catch (err) {
+        preview.innerHTML = `<span class="quote-meta" style="color:var(--up);">查詢錯誤：${err.message}</span>`;
+      }
+    }
+
+    function addCurrentToHoldings() {
+      if (!currentQuote) return;
+      const shares = parseFloat(document.getElementById("addShares").value) || 0;
+      const cost = parseFloat(document.getElementById("addCost").value) || currentQuote.price;
+
+      const existing = state.holdings.find(h => h.code === currentQuote.code);
+      if (existing) {
+        // 若已存在則加總張數並重算加權平均成本
+        const totalShares = existing.shares + shares;
+        if (totalShares > 0) {
+          existing.cost = +(((existing.shares * existing.cost) + (shares * cost)) / totalShares).toFixed(2);
+        }
+        existing.shares = +totalShares.toFixed(4);
+        Object.assign(existing, {
+          name: currentQuote.name,
+          price: currentQuote.price,
+          change: currentQuote.change,
+          changePct: currentQuote.changePct,
+          volume: currentQuote.volume
+        });
+      } else {
+        state.holdings.push({
+          ...currentQuote,
+          shares,
+          cost
+        });
+      }
+      saveState();
+      renderAll();
+    }
+
+    // 批次更新清單內所有報價
+    async function refreshAllQuotes() {
+      if (state.holdings.length === 0) return;
+      const btn = document.getElementById("refreshAllBtn");
+      btn.textContent = "更新中...";
+      btn.disabled = true;
+      try {
+        const codes = state.holdings.map(h => h.code);
+        const dataMap = await fetchQuotes(codes);
+        state.holdings.forEach(h => {
+          if (dataMap[h.code]) {
+            const q = dataMap[h.code];
+            h.name = q.name;
+            h.price = q.price;
+            h.change = q.change;
+            h.changePct = q.changePct;
+            h.volume = q.volume;
+          }
+        });
+        saveState();
+        renderAll();
+      } catch (err) {
+        alert("更新報價失敗：" + err.message);
+      } finally {
+        btn.textContent = "更新全部報價";
+        btn.disabled = false;
+      }
+    }
+
+    // 2. 繪製持股清單與 3. 生成摘要
+    function renderAll() {
+      const tbody = document.getElementById("holdingsBody");
+      const capital = Number(state.totalCapital) || 0;
+      let totalInvested = 0;
+      let totalMarketVal = 0;
+
+      if (state.holdings.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--muted); padding:24px;">目前尚無持股，請由上方查詢並加入。</td></tr>`;
+      } else {
+        tbody.innerHTML = state.holdings.map((h, idx) => {
+          const invested = h.cost * h.shares * 1000;
+          const marketVal = h.price * h.shares * 1000;
+          const profit = marketVal - invested;
+          const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
+          const weightPct = capital > 0 ? (invested / capital) * 100 : 0;
+
+          totalInvested += invested;
+          totalMarketVal += marketVal;
+
+          const profitClass = profit > 0 ? "up" : profit < 0 ? "down" : "flat";
+          const profitSign = profit > 0 ? "+" : "";
+
+          return `
+            <tr>
+              <td><strong>${h.code}</strong></td>
+              <td>${h.name}</td>
+              <td class="${h.change > 0 ? "up" : h.change < 0 ? "down" : "flat"}">${h.price.toFixed(2)}</td>
+              <td>${formatChangeHtml(h.change, h.changePct)}</td>
+              <td>${(h.volume || 0).toLocaleString()}</td>
+              <td><input type="number" class="inline-edit" step="0.001" min="0" value="${h.shares}" onchange="updateHolding(${idx}, 'shares', this.value)" /></td>
+              <td><strong>${weightPct.toFixed(1)}%</strong></td>
+              <td><input type="number" class="inline-edit" step="0.01" min="0" value="${h.cost}" onchange="updateHolding(${idx}, 'cost', this.value)" /></td>
+              <td class="${profitClass}">${profitSign}${Math.round(profit).toLocaleString()} (${profitSign}${profitPct.toFixed(2)}%)</td>
+              <td><button class="btn-danger" onclick="removeHolding(${idx})">刪除</button></td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      // 統計列
+      const totalProfit = totalMarketVal - totalInvested;
+      const totalProfitPct = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+      const usedPct = capital > 0 ? (totalInvested / capital) * 100 : 0;
+      const cashAmount = Math.max(0, capital - totalInvested);
+      const cashPct = Math.max(0, 100 - usedPct);
+      const profitClass = totalProfit > 0 ? "up" : totalProfit < 0 ? "down" : "flat";
+      const sign = totalProfit > 0 ? "+" : "";
+
+      document.getElementById("portfolioStats").innerHTML = `
+        <span>總投入成本：<strong>${Math.round(totalInvested).toLocaleString()} 元</strong> (${usedPct.toFixed(1)}%)</span>
+        <span>剩餘現金：<strong>${Math.round(cashAmount).toLocaleString()} 元</strong> (${cashPct.toFixed(1)}%)</span>
+        <span>未實現損益：<strong class="${profitClass}">${sign}${Math.round(totalProfit).toLocaleString()} 元 (${sign}${totalProfitPct.toFixed(2)}%)</strong></span>
+      `;
+
+      // 3. 自動產生文字摘要
+      let summary = "";
+      if (state.holdings.length === 0) {
+        summary = "目前現金100%。";
+      } else {
+        const parts = state.holdings.map(h => {
+          const invested = h.cost * h.shares * 1000;
+          const pct = capital > 0 ? (invested / capital) * 100 : 0;
+          // 整數不顯示小數點，非整數顯示 1 位小數
+          const pctStr = Number.isInteger(+pct.toFixed(1)) ? Math.round(pct) : pct.toFixed(1);
+          return `${pctStr}%的資金在${h.code}，成本${h.cost}`;
+        });
+        const cashStr = Number.isInteger(+cashPct.toFixed(1)) ? Math.round(cashPct) : cashPct.toFixed(1);
+        summary = `${parts.join("；")}，目前現金${cashStr}%。`;
+      }
+      document.getElementById("summaryText").textContent = summary;
+    }
+
+    window.updateHolding = function(idx, field, val) {
+      state.holdings[idx][field] = parseFloat(val) || 0;
+      saveState();
+      renderAll();
+    };
+
+    window.removeHolding = function(idx) {
+      state.holdings.splice(idx, 1);
+      saveState();
+      renderAll();
+    };
+
+    // 事件綁定
+    document.getElementById("searchBtn").addEventListener("click", handleSearch);
+    document.getElementById("stockCodeInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") handleSearch();
+    });
+    document.getElementById("refreshAllBtn").addEventListener("click", refreshAllQuotes);
+
+    document.getElementById("totalCapital").addEventListener("input", e => {
+      state.totalCapital = parseFloat(e.target.value) || 0;
+      saveState();
+      renderAll();
+    });
+
+    document.getElementById("gasUrl").addEventListener("change", e => {
+      state.gasUrl = e.target.value.trim();
+      saveState();
+      updateModeBadge();
+    });
+
+    document.getElementById("strategyNotes").addEventListener("input", e => {
+      state.notes = e.target.value;
+      saveState();
+    });
+
+    document.getElementById("copySummaryBtn").addEventListener("click", async () => {
+      let text = document.getElementById("summaryText").textContent;
+      if (document.getElementById("includeNotesChk").checked && state.notes.trim()) {
+        text += `\n交易戰法：${state.notes.trim()}`;
+      }
+      await navigator.clipboard.writeText(text);
+      const btn = document.getElementById("copySummaryBtn");
+      const old = btn.textContent;
+      btn.textContent = "已複製！";
+      setTimeout(() => btn.textContent = old, 1500);
+    });
+
+    loadState();
+  </script>
+</body>
+</html>
