@@ -71,10 +71,10 @@
     .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
     .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
     .btn-outline:hover:not(:disabled) { background: #eff6ff; }
-    .btn-sell { background: #fef3c7; color: #b45309; padding: 5px 9px; font-size: 0.82rem; }
-    .btn-sell:hover { background: #fde68a; }
+    .btn-sell { background: #d97706; color: #fff; padding: 6px 12px; font-size: 0.84rem; }
+    .btn-sell:hover:not(:disabled) { background: #b45309; }
     .btn-danger { background: #fee2e2; color: #b91c1c; padding: 5px 9px; font-size: 0.82rem; }
-    .btn-danger:hover { background: #fecaca; }
+    .btn-danger:hover:not(:disabled) { background: #fecaca; }
 
     /* 查股區 */
     .search-grid { display: grid; grid-template-columns: 260px 1fr; gap: 16px; align-items: stretch; }
@@ -110,7 +110,36 @@
     th { background: #f8fafc; color: var(--muted); font-weight: 600; font-size: 0.82rem; }
     th:nth-child(1), td:nth-child(1), th:nth-child(2), td:nth-child(2) { text-align: left; }
     .inline-edit { width: 78px !important; padding: 4px 6px !important; text-align: right; font-size: 0.88rem !important; }
-    .ops-cell { display: flex; gap: 6px; justify-content: flex-end; }
+
+    /* 表格內嵌賣出列 */
+    .sell-subrow td {
+      background: #fffbeb;
+      border-bottom: 2px solid #e2e8f0;
+      padding: 8px 12px;
+      text-align: left !important;
+    }
+    .sell-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.86rem;
+      color: #78350f;
+    }
+    .sell-bar label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin: 0;
+      color: #78350f;
+      font-size: 0.84rem;
+    }
+    .sell-bar input {
+      width: 88px;
+      padding: 4px 7px;
+      font-size: 0.86rem;
+      background: #fff;
+    }
 
     .summary-strip {
       display: flex;
@@ -150,37 +179,6 @@
     .action-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .checkbox-label { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; cursor: pointer; }
     .badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 999px; background: #dcfce7; color: #166534; font-weight: 600; }
-
-    /* 賣出彈出視窗 */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      z-index: 1000;
-    }
-    .modal-backdrop.open { display: flex; }
-    .modal {
-      background: #fff;
-      border-radius: 14px;
-      padding: 20px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
-    }
-    .modal h3 { margin: 0 0 12px; font-size: 1.1rem; }
-    .modal-field { margin-bottom: 12px; }
-    .modal-preview {
-      background: #f8fafc;
-      padding: 10px 12px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      margin-bottom: 14px;
-    }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
     @media (max-width: 820px) {
       .top-bar, .search-grid, .bottom-grid { grid-template-columns: 1fr; }
@@ -248,7 +246,7 @@
       <div class="summary-strip" id="portfolioStats"></div>
     </div>
 
-    <!-- 3. 近期損益表（新增） -->
+    <!-- 3. 近期損益表 -->
     <div class="card">
       <div class="card-header">
         <h2>3. 近期損益表（已實現）</h2>
@@ -271,10 +269,11 @@
               <th>賣出價格</th>
               <th>已實現損益</th>
               <th>報酬率</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody id="historyBody">
-            <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">載入交易紀錄中...</td></tr>
+            <tr><td colspan="8" style="text-align:center; color:var(--muted); padding:20px;">載入交易紀錄中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -305,26 +304,6 @@
     </div>
   </div>
 
-  <!-- 賣出確認視窗 -->
-  <div class="modal-backdrop" id="sellModal">
-    <div class="modal">
-      <h3 id="sellModalTitle">賣出股票</h3>
-      <div class="modal-field">
-        <label for="sellSharesInput">賣出張數</label>
-        <input type="number" id="sellSharesInput" step="0.001" min="0" />
-      </div>
-      <div class="modal-field">
-        <label for="sellPriceInput">賣出價格（元）</label>
-        <input type="number" id="sellPriceInput" step="0.01" min="0" />
-      </div>
-      <div class="modal-preview" id="sellPreviewBox"></div>
-      <div class="modal-actions">
-        <button class="btn-outline" id="cancelSellBtn">取消</button>
-        <button class="btn-primary" id="confirmSellBtn">確認賣出並存入試算表</button>
-      </div>
-    </div>
-  </div>
-
   <script>
     const STORAGE_KEY = "tw_stock_tracker_v1";
     const _ENDPOINT_B64 = "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J3Qld5cFpoWGttT2tjQUljalpOMnRIV3NKOFhzRUtVMklGYjE2VG1GOHEwbW1rSHIzN3AxQ0RGa2ZycEN1ZkFERS9leGVj";
@@ -340,7 +319,6 @@
     };
 
     let currentQuote = null;
-    let sellTargetIdx = null;
     let allHistoryRecords = [];
     let selectedMonths = 1;
 
@@ -466,7 +444,7 @@
       }
     }
 
-    // 2. 繪製持股清單與摘要
+    // 2. 繪製持股清單（每檔股票下一行直接內嵌賣出列）
     function renderAll() {
       const tbody = document.getElementById("holdingsBody");
       const capital = Number(state.totalCapital) || 0;
@@ -500,10 +478,16 @@
               <td><strong>${weightPct.toFixed(1)}%</strong></td>
               <td><input type="number" class="inline-edit" step="0.01" min="0" value="${h.cost}" onchange="updateHolding(${idx}, 'cost', this.value)" /></td>
               <td class="${profitClass}">${profitSign}${Math.round(profit).toLocaleString()} (${profitSign}${profitPct.toFixed(2)}%)</td>
-              <td>
-                <div class="ops-cell">
-                  <button class="btn-sell" onclick="openSellModal(${idx})">賣出</button>
-                  <button class="btn-danger" onclick="removeHolding(${idx})">刪除</button>
+              <td><button class="btn-danger" onclick="removeHolding(${idx})">刪除</button></td>
+            </tr>
+            <tr class="sell-subrow">
+              <td colspan="10">
+                <div class="sell-bar">
+                  <strong>↳ 賣出 ${h.code}：</strong>
+                  <label>賣出張數 <input type="number" id="sell-shares-${idx}" step="0.001" min="0" value="${h.shares}" oninput="updateInlineSellPreview(${idx})" /></label>
+                  <label>賣出價格 <input type="number" id="sell-price-${idx}" step="0.01" min="0" value="${h.price}" oninput="updateInlineSellPreview(${idx})" /></label>
+                  <span id="sell-preview-${idx}">預估損益：<strong class="${profitClass}">${profitSign}${Math.round(profit).toLocaleString()} 元 (${profitSign}${profitPct.toFixed(2)}%)</strong></span>
+                  <button class="btn-sell" id="sell-btn-${idx}" onclick="executeSell(${idx})">確認賣出並存入試算表</button>
                 </div>
               </td>
             </tr>
@@ -541,90 +525,63 @@
       document.getElementById("summaryText").textContent = summary;
     }
 
-    // 賣出視窗邏輯
-    window.openSellModal = function(idx) {
-      sellTargetIdx = idx;
+    // 即時更新賣出列的預估損益
+    window.updateInlineSellPreview = function(idx) {
       const h = state.holdings[idx];
-      document.getElementById("sellModalTitle").textContent = `賣出 ${h.code} ${h.name}`;
-      document.getElementById("sellSharesInput").value = h.shares;
-      document.getElementById("sellPriceInput").value = h.price;
-      updateSellPreview();
-      document.getElementById("sellModal").classList.add("open");
-    };
-
-    function updateSellPreview() {
-      if (sellTargetIdx === null) return;
-      const h = state.holdings[sellTargetIdx];
-      const shares = parseFloat(document.getElementById("sellSharesInput").value) || 0;
-      const sellPrice = parseFloat(document.getElementById("sellPriceInput").value) || 0;
+      const shares = parseFloat(document.getElementById(`sell-shares-${idx}`).value) || 0;
+      const sellPrice = parseFloat(document.getElementById(`sell-price-${idx}`).value) || 0;
       const invested = h.cost * shares * 1000;
       const profit = Math.round((sellPrice - h.cost) * shares * 1000);
       const profitPct = invested > 0 ? (profit / invested) * 100 : 0;
       const cls = profit > 0 ? "up" : profit < 0 ? "down" : "flat";
       const sign = profit > 0 ? "+" : "";
+      document.getElementById(`sell-preview-${idx}`).innerHTML =
+        `預估損益：<strong class="${cls}">${sign}${profit.toLocaleString()} 元 (${sign}${profitPct.toFixed(2)}%)</strong>`;
+    };
 
-      document.getElementById("sellPreviewBox").innerHTML = `
-        買進成本：<strong>${h.cost}</strong> 元<br/>
-        預估實現損益：<strong class="${cls}">${sign}${profit.toLocaleString()} 元 (${sign}${profitPct.toFixed(2)}%)</strong>
-      `;
-    }
-
-    document.getElementById("sellSharesInput").addEventListener("input", updateSellPreview);
-    document.getElementById("sellPriceInput").addEventListener("input", updateSellPreview);
-    document.getElementById("cancelSellBtn").addEventListener("click", () => {
-      document.getElementById("sellModal").classList.remove("open");
-      sellTargetIdx = null;
-    });
-
-    document.getElementById("confirmSellBtn").addEventListener("click", async () => {
-      if (sellTargetIdx === null) return;
-      const h = state.holdings[sellTargetIdx];
-      const shares = parseFloat(document.getElementById("sellSharesInput").value) || 0;
-      const sellPrice = parseFloat(document.getElementById("sellPriceInput").value) || 0;
+    // 執行賣出並寫入試算表
+    window.executeSell = async function(idx) {
+      const h = state.holdings[idx];
+      const shares = parseFloat(document.getElementById(`sell-shares-${idx}`).value) || 0;
+      const sellPrice = parseFloat(document.getElementById(`sell-price-${idx}`).value) || 0;
       if (shares <= 0 || sellPrice <= 0) {
         alert("請輸入有效的賣出張數與價格");
         return;
       }
 
-      const btn = document.getElementById("confirmSellBtn");
+      const btn = document.getElementById(`sell-btn-${idx}`);
       btn.textContent = "寫入試算表中...";
       btn.disabled = true;
 
       try {
-        const payload = {
-          action: "sell",
-          code: h.code,
-          name: h.name,
-          shares: shares,
-          cost: h.cost,
-          sellPrice: sellPrice
-        };
-        // 不設 application/json header 以避開 GAS CORS preflight 限制
         const res = await fetch(getApiUrl(), {
           method: "POST",
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            action: "sell",
+            code: h.code,
+            name: h.name,
+            shares: shares,
+            cost: h.cost,
+            sellPrice: sellPrice
+          })
         });
         const json = await res.json();
         if (json.status !== "ok") throw new Error(json.message || "寫入失敗");
 
-        // 更新持股清單：全數賣出則移除，部分賣出則扣除張數
         if (shares >= h.shares) {
-          state.holdings.splice(sellTargetIdx, 1);
+          state.holdings.splice(idx, 1);
         } else {
           h.shares = +(h.shares - shares).toFixed(4);
         }
         saveState();
         renderAll();
-        document.getElementById("sellModal").classList.remove("open");
-        sellTargetIdx = null;
         await loadTradeHistory();
       } catch (err) {
         alert("寫入試算表失敗：" + err.message);
-      } finally {
         btn.textContent = "確認賣出並存入試算表";
         btn.disabled = false;
       }
-    });
+    };
 
     // 3. 讀取與篩選近期損益表
     async function loadTradeHistory() {
@@ -638,7 +595,7 @@
         allHistoryRecords = json.data || [];
         renderHistory();
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--up); padding:18px;">無法讀取試算表紀錄：${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--up); padding:18px;">無法讀取試算表紀錄：${err.message}</td></tr>`;
         document.getElementById("historyStats").innerHTML = "";
       }
     }
@@ -655,7 +612,7 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">此期間內尚無已實現交易紀錄。</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--muted); padding:20px;">此期間內尚無已實現交易紀錄。</td></tr>`;
         document.getElementById("historyStats").innerHTML = `<span>期間交易筆數：<strong>0 筆</strong></span><span>期間已實現總損益：<strong>0 元</strong></span>`;
         return;
       }
@@ -677,6 +634,7 @@
             <td>${r.sellPrice.toFixed(2)}</td>
             <td class="${cls}">${sign}${Math.round(r.profit).toLocaleString()}</td>
             <td class="${cls}">${sign}${r.profitPct.toFixed(2)}%</td>
+            <td><button class="btn-danger" onclick="deleteHistoryRecord(${r.row}, this)">刪除</button></td>
           </tr>
         `;
       }).join("");
@@ -691,6 +649,26 @@
         <span>期間已實現總損益：<strong class="${totalCls}">${totalSign}${Math.round(totalProfit).toLocaleString()} 元</strong></span>
       `;
     }
+
+    // 刪除試算表中的交易紀錄
+    window.deleteHistoryRecord = async function(row, btn) {
+      if (!confirm("確定要從試算表永久刪除這筆交易紀錄嗎？")) return;
+      btn.textContent = "刪除中...";
+      btn.disabled = true;
+      try {
+        const res = await fetch(getApiUrl(), {
+          method: "POST",
+          body: JSON.stringify({ action: "deleteHistory", row: row })
+        });
+        const json = await res.json();
+        if (json.status !== "ok") throw new Error(json.message || "刪除失敗");
+        await loadTradeHistory();
+      } catch (err) {
+        alert("刪除紀錄失敗：" + err.message);
+        btn.textContent = "刪除";
+        btn.disabled = false;
+      }
+    };
 
     window.updateHolding = function(idx, field, val) {
       state.holdings[idx][field] = parseFloat(val) || 0;
